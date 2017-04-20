@@ -10,6 +10,7 @@ import android.support.annotation.Nullable;
 import android.util.AttributeSet;
 import android.view.View;
 
+import com.kiba.coordinateaxischart.exception.FunctionNotValidException;
 import com.kiba.coordinateaxischart.exception.FunctionTypeException;
 import com.kiba.coordinateaxischart.type.CircularType;
 import com.kiba.coordinateaxischart.type.ExpType;
@@ -56,6 +57,8 @@ public class CoordinateAxisChart extends View {
     private Float a;
     private Float b;
     private Float c;
+    private Float d;
+    private CircularType.Circular circular;
 
     private LinearType type;
 
@@ -250,8 +253,10 @@ public class CoordinateAxisChart extends View {
                     }
                     break;
                 case "LogType":
+                    generateLogLines(a, b, c, d, canvas);
                     break;
                 case "CircularType":
+                    generateCircularLines(a, b, c, d, canvas, circular);
                     break;
             }
         }
@@ -313,6 +318,7 @@ public class CoordinateAxisChart extends View {
      * generate the exp function lines
      * @param a {@link ExpType#ExpType(float, float, float)}
      * @param b {@link ExpType#ExpType(float, float, float)}
+     * @param c {@link ExpType#ExpType(float, float, float)}
      * @param canvas canvas
      */
     private void generateExpLines(Float a, Float b, Float c, Canvas canvas) {
@@ -337,21 +343,94 @@ public class CoordinateAxisChart extends View {
         drawBezier(canvas, FuncType.EXP_TYPE);
     }
 
+    /**
+     * generate the log function lines
+     * @param a {@link LogType#LogType(float, float, float, float)}
+     * @param b {@link LogType#LogType(float, float, float, float)}
+     * @param c {@link LogType#LogType(float, float, float, float)}
+     * @param d {@link LogType#LogType(float, float, float, float)}
+     * @param canvas canvas
+     */
+    private void generateLogLines(Float a, Float b, Float c, Float d, Canvas canvas){
+        // raw
+        PointF start = origin;
+        PointF end = rightPoint;
+
+        float unit = (end.x - start.x) / xPointsValues.length;
+
+        for (int i = 0; i < xPointsValues.length; i++) {
+            // get the split point
+            PointF split = new PointF(start.x + i * unit, start.y);
+            // logical
+            PointF splitLogic = convertRawPoint2Logical(split, unitLength);
+            // calculate
+            try {
+                splitLogic.y = FuncUtils.getLogYValue(a, b, c, d, splitLogic.x);
+            } catch (FunctionNotValidException e) {
+                continue;
+            }
+            // convert logical to raw
+            PointF splitRaw = convertLogicalPoint2Raw(splitLogic, unitLength);
+            xPointsValues[i] = splitRaw;
+        }
+
+        drawBezier(canvas, FuncType.LOG_TYPE);
+    }
+
+    /**
+     * generate the log function lines
+     * @param a {@link LogType#LogType(float, float, float, float)}
+     * @param b {@link LogType#LogType(float, float, float, float)}
+     * @param c {@link LogType#LogType(float, float, float, float)}
+     * @param d {@link LogType#LogType(float, float, float, float)}
+     * @param canvas canvas
+     */
+    private void generateCircularLines(Float a, Float b, Float c, Float d, Canvas canvas, CircularType.Circular type){
+        // raw
+        PointF start = leftPoint;
+        PointF end = rightPoint;
+
+        float unit = (end.x - start.x) / xPointsValues.length;
+
+        for (int i = 0; i < xPointsValues.length; i++) {
+            // get the split point
+            PointF split = new PointF(start.x + i * unit, start.y);
+            // logical
+            PointF splitLogic = convertRawPoint2Logical(split, unitLength);
+            // calculate
+            Float y;
+            try {
+                y = FuncUtils.getCircularYValue(a, b, c, d, splitLogic.x, type);
+            } catch (FunctionTypeException e) {
+                continue;
+            }
+            splitLogic.y = y;
+            // convert logical to raw
+            PointF splitRaw = convertLogicalPoint2Raw(splitLogic, unitLength);
+            xPointsValues[i] = splitRaw;
+        }
+
+        drawBezier(canvas, FuncType.CIRCULAR_TYPE);
+    }
+
     private void drawBezier(Canvas canvas, FuncType type) {
         if(xPointsValues != null && xPointsValues.length > 0){
             Path path = new Path();
-            for (int i = 0; i < xPointsValues.length; i++) {
+            for (int i = 0; i < xPointsValues.length - 1; i++) {
                 // if out of screen, do not render it
-                if((xPointsValues[i].y <= height && xPointsValues[i].y >= 0) ||
-                        ( i < xPointsValues.length - 1 && xPointsValues[i + 1].y <= height && xPointsValues[i + 1].y >= 0) ||
-                        ( i > 0 && xPointsValues[i - 1].y <= height && xPointsValues[i - 1].y >= 0) ){
-
+                if(     xPointsValues[i] != null &&
+                     (
+                        (xPointsValues[i].y <= height && xPointsValues[i].y >= 0) || // inside screen
+                        ( i < xPointsValues.length - 1 && xPointsValues[i + 1].y <= height && xPointsValues[i + 1].y >= 0) || // the next point is inside screen
+                        ( i > 0 && xPointsValues[i - 1].y <= height && xPointsValues[i - 1].y >= 0)  // the previous point is inside screen
+                     )
+                ){
                     path.moveTo(xPointsValues[i].x, xPointsValues[i].y);
 
                     // get a point on the line which super near the current point
                     float ad_x1 = xPointsValues[i].x + dx;
                     PointF dpLogic1 = convertRawPoint2Logical(ad_x1, origin.y, unitLength, origin);
-                    PointF dp1 = FuncUtils.getPointByType(a, b, c, dpLogic1.x, type);
+                    PointF dp1 = FuncUtils.getPointByType(a, b, c, d, dpLogic1.x, type, circular);
                     // get a line near xPointsValues[i]
                     float[] tangentLineFuncCoefficients1 = FuncUtils.computeLinearFuncsByPoints(
                                     convertRawPoint2Logical(xPointsValues[i], unitLength)
@@ -364,7 +443,7 @@ public class CoordinateAxisChart extends View {
                     // get a point on the line which super near the current point
                     float ad_x2 = xPointsValues[i + 1].x - dx;
                     PointF dpLogic2 = convertRawPoint2Logical(ad_x2, origin.y, unitLength, origin);
-                    PointF dp2 = FuncUtils.getPointByType(a, b, c, dpLogic2.x, type);
+                    PointF dp2 = FuncUtils.getPointByType(a, b, c, d, dpLogic2.x, type, circular);
                     // get a line near xPointsValues[i + 1]
                     float[] tangentLineFuncCoefficients2 = FuncUtils.computeLinearFuncsByPoints(
                                     convertRawPoint2Logical(xPointsValues[i + 1], unitLength)
@@ -421,6 +500,7 @@ public class CoordinateAxisChart extends View {
                     a = logType.a;
                     b = logType.b;
                     c = logType.c;
+                    d = logType.d;
                     this.type = logType;
                     break;
                 case "CircularType":
@@ -428,6 +508,8 @@ public class CoordinateAxisChart extends View {
                     a = circularType.a;
                     b = circularType.b;
                     c = circularType.c;
+                    d = circularType.d;
+                    circular = circularType.type;
                     this.type = circularType;
                     break;
                 default:
