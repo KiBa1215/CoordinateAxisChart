@@ -13,9 +13,11 @@ import android.view.View;
 import com.kiba.coordinateaxischart.exception.FunctionTypeException;
 import com.kiba.coordinateaxischart.type.CircularType;
 import com.kiba.coordinateaxischart.type.ExpType;
+import com.kiba.coordinateaxischart.type.FuncType;
 import com.kiba.coordinateaxischart.type.LinearType;
 import com.kiba.coordinateaxischart.type.LogType;
 import com.kiba.coordinateaxischart.type.PowerType;
+import com.orhanobut.logger.Logger;
 
 /**
  * Created by KiBa-PC on 2017/4/18.
@@ -36,7 +38,8 @@ public class CoordinateAxisChart extends View {
     private int FUNCTION_LINE_WIDTH = 0;
     private int POINT_RADIUS = 5;
 
-    private int SEGMENT_SIZE = 20; // by default, 100 points will be taken
+    private int SEGMENT_SIZE = 30; // by default, 30 points will be taken
+    private int dx = 2;
 
     private int COORDINATE_TEXT_SIZE = 0; // the text size of text beside axis
 
@@ -77,7 +80,7 @@ public class CoordinateAxisChart extends View {
 
         // define the values of widths
         AXIS_WIDTH = Utils.dip2px(context, 1f);
-        FUNCTION_LINE_WIDTH = Utils.dip2px(context, 1f);
+        FUNCTION_LINE_WIDTH = Utils.dip2px(context, 1.5f);
         // coordinate text size
         COORDINATE_TEXT_SIZE = Utils.sp2px(context, 8f);
 
@@ -240,6 +243,11 @@ public class CoordinateAxisChart extends View {
                     }
                     break;
                 case "ExpType":
+                    if(c == 1){
+                        generateLinearLines(0f, a + b, canvas);
+                    }else{
+                        generateExpLines(a, b, c, canvas);
+                    }
                     break;
                 case "LogType":
                     break;
@@ -263,8 +271,8 @@ public class CoordinateAxisChart extends View {
         PointF startLogic = convertRawPoint2Logical(start, unitLength);
         PointF endLogic = convertRawPoint2Logical(end, unitLength);
         // calculate
-        startLogic.y = a * startLogic.x + b ;
-        endLogic.y = a * endLogic.x + b ;
+        startLogic.y = FuncUtils.getLinearYValue(a, b, startLogic.x);
+        endLogic.y = FuncUtils.getLinearYValue(a, b, endLogic.x);
         // convert logical to raw
         PointF startRaw = convertLogicalPoint2Raw(startLogic, unitLength);
         PointF endRaw = convertLogicalPoint2Raw(endLogic, unitLength);
@@ -291,28 +299,95 @@ public class CoordinateAxisChart extends View {
             // logical
             PointF splitLogic = convertRawPoint2Logical(split, unitLength);
             // calculate
-            splitLogic.y = (float) (a * Math.pow(splitLogic.x, c) + b);
+            splitLogic.y = FuncUtils.getPowYValue(a, b, c, splitLogic.x);
             // convert logical to raw
             PointF splitRaw = convertLogicalPoint2Raw(splitLogic, unitLength);
             xPointsValues[i] = splitRaw;
         }
 
-        drawBezier(canvas);
+        drawBezier(canvas, FuncType.POWER_TYPE);
 
     }
 
-    private void drawBezier(Canvas canvas) {
+    /**
+     * generate the exp function lines
+     * @param a {@link ExpType#ExpType(float, float, float)}
+     * @param b {@link ExpType#ExpType(float, float, float)}
+     * @param canvas canvas
+     */
+    private void generateExpLines(Float a, Float b, Float c, Canvas canvas) {
+        // raw
+        PointF start = leftPoint;
+        PointF end = rightPoint;
+
+        float unit = (end.x - start.x) / xPointsValues.length;
+
+        for (int i = 0; i < xPointsValues.length; i++) {
+            // get the split point
+            PointF split = new PointF(start.x + i * unit, start.y);
+            // logical
+            PointF splitLogic = convertRawPoint2Logical(split, unitLength);
+            // calculate
+            splitLogic.y = FuncUtils.getExpYValue(a, b, c, splitLogic.x);
+            // convert logical to raw
+            PointF splitRaw = convertLogicalPoint2Raw(splitLogic, unitLength);
+            xPointsValues[i] = splitRaw;
+        }
+
+        drawBezier(canvas, FuncType.EXP_TYPE);
+    }
+
+    private void drawBezier(Canvas canvas, FuncType type) {
         if(xPointsValues != null && xPointsValues.length > 0){
             Path path = new Path();
-            for (int i = 0; i < xPointsValues.length - 1; i++) {
+            for (int i = 0; i < xPointsValues.length; i++) {
                 // if out of screen, do not render it
-                if(xPointsValues[i].y <= height && xPointsValues[i].y >= 0){
+                if((xPointsValues[i].y <= height && xPointsValues[i].y >= 0) ||
+                        ( i < xPointsValues.length - 1 && xPointsValues[i + 1].y <= height && xPointsValues[i + 1].y >= 0) ||
+                        ( i > 0 && xPointsValues[i - 1].y <= height && xPointsValues[i - 1].y >= 0) ){
+
                     path.moveTo(xPointsValues[i].x, xPointsValues[i].y);
-                    path.quadTo(xPointsValues[i + 1].x, xPointsValues[i + 1].y, xPointsValues[i + 2].x, xPointsValues[i + 2].y);
-//                    path.quadTo(xPointsValues[i + 1].x, xPointsValues[i + 1].y, xPointsValues[i + 2].x, xPointsValues[i + 2].y);
-                    path.close();
+
+                    // get a point on the line which super near the current point
+                    float ad_x1 = xPointsValues[i].x + dx;
+                    PointF dpLogic1 = convertRawPoint2Logical(ad_x1, origin.y, unitLength, origin);
+                    PointF dp1 = FuncUtils.getPointByType(a, b, c, dpLogic1.x, type);
+                    // get a line near xPointsValues[i]
+                    float[] tangentLineFuncCoefficients1 = FuncUtils.computeLinearFuncsByPoints(
+                                    convertRawPoint2Logical(xPointsValues[i], unitLength)
+                                    , dp1);
+                    if(tangentLineFuncCoefficients1 == null){
+                        Logger.w("tangentLineFuncCoefficients1 == null");
+                        return;
+                    }
+
+                    // get a point on the line which super near the current point
+                    float ad_x2 = xPointsValues[i + 1].x - dx;
+                    PointF dpLogic2 = convertRawPoint2Logical(ad_x2, origin.y, unitLength, origin);
+                    PointF dp2 = FuncUtils.getPointByType(a, b, c, dpLogic2.x, type);
+                    // get a line near xPointsValues[i + 1]
+                    float[] tangentLineFuncCoefficients2 = FuncUtils.computeLinearFuncsByPoints(
+                                    convertRawPoint2Logical(xPointsValues[i + 1], unitLength)
+                                    , dp2);
+                    if(tangentLineFuncCoefficients2 == null){
+                        Logger.w("tangentLineFuncCoefficients2 == null");
+                        return;
+                    }
+
+                    // compute the intersection point as the control point of bezier curve
+                    PointF controlPointLogic =  FuncUtils.intersectionBetweenLinearFuncs(
+                            tangentLineFuncCoefficients1[0],
+                            tangentLineFuncCoefficients1[1],
+                            tangentLineFuncCoefficients2[0],
+                            tangentLineFuncCoefficients2[1]
+                    );
+                    if(controlPointLogic == null){
+                        Logger.w("controlPointLogic == null");
+                        return;
+                    }
+                    PointF controlPointRaw = convertLogicalPoint2Raw(controlPointLogic, unitLength);
+                    path.quadTo(controlPointRaw.x, controlPointRaw.y, xPointsValues[i + 1].x, xPointsValues[i + 1].y);
                     canvas.drawPath(path, functionLinePaint);
-//                    canvas.drawLine(xPointsValues[i].x, xPointsValues[i].y, xPointsValues[i + 1].x, xPointsValues[i + 1].y, functionLinePaint);
                 }
             }
         }
@@ -384,11 +459,8 @@ public class CoordinateAxisChart extends View {
 
     private PointF convertRawPoint2Logical(float x, float y, float unitLength, PointF origin){
         float logicalX = (x - origin.x) / unitLength;
-        float logicalY = (y - origin.y) / unitLength;
+        float logicalY = (origin.y - y) / unitLength;
         return new PointF(logicalX, logicalY);
     }
 
-    private PointF centerPonit(PointF p1, PointF p2){
-        return new PointF((p1.x + p2.x) / 2, (p1.y + p2.y) / 2);
-    }
 }

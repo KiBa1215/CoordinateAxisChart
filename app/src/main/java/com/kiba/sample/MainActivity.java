@@ -5,6 +5,7 @@ import android.os.Bundle;
 
 import com.kiba.coordinateaxischart.CoordinateAxisChart;
 import com.kiba.coordinateaxischart.exception.FunctionTypeException;
+import com.kiba.coordinateaxischart.type.ExpType;
 import com.kiba.coordinateaxischart.type.LinearType;
 import com.kiba.coordinateaxischart.type.PowerType;
 
@@ -23,7 +24,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void run() {
                 try {
-                    coordinateAxisChart.setFunctionType(new PowerType(1, 0, 3));
+                    coordinateAxisChart.setFunctionType(new ExpType(1, 0, 2));
                 } catch (FunctionTypeException e) {
                     e.printStackTrace();
                 }
