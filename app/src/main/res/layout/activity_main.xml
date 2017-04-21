@@ -7,10 +7,61 @@
     android:layout_height="match_parent"
     tools:context="com.kiba.sample.MainActivity">
 
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_above="@+id/coordinateAxisChart"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/linear"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="y=2x+1"/>
+
+        <Button
+            android:id="@+id/power"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="y=x^2"
+            android:layout_toRightOf="@+id/linear"/>
+
+        <Button
+            android:id="@+id/log"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="y=log(x)"
+            android:layout_below="@+id/linear"/>
+
+        <Button
+            android:id="@+id/sin"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="y=sin(x)"
+            android:layout_below="@+id/linear"
+            android:layout_toRightOf="@+id/log"/>
+
+        <Button
+            android:id="@+id/exp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="y=2^x"
+            android:layout_below="@+id/linear"
+            android:layout_toRightOf="@+id/sin"/>
+
+        <Button
+            android:id="@+id/reset"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="reset"
+            android:layout_below="@+id/log"/>
+
+    </RelativeLayout>
+
     <com.kiba.coordinateaxischart.CoordinateAxisChart
         android:id="@+id/coordinateAxisChart"
-        android:layout_width="300dp"
+        android:layout_width="match_parent"
         android:layout_height="300dp"
-        android:layout_centerInParent="true"/>
+        android:layout_alignParentBottom="true"/>
 
 </RelativeLayout>

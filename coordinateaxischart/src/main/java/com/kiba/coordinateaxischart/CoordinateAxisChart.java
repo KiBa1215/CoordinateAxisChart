@@ -8,6 +8,7 @@ import android.graphics.Path;
 import android.graphics.PointF;
 import android.support.annotation.Nullable;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.view.View;
 
 import com.kiba.coordinateaxischart.exception.FunctionNotValidException;
@@ -18,13 +19,17 @@ import com.kiba.coordinateaxischart.type.FuncType;
 import com.kiba.coordinateaxischart.type.LinearType;
 import com.kiba.coordinateaxischart.type.LogType;
 import com.kiba.coordinateaxischart.type.PowerType;
-import com.orhanobut.logger.Logger;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Created by KiBa-PC on 2017/4/18.
  */
 
 public class CoordinateAxisChart extends View {
+
+    private static final String TAG = "CoordinateAxisChart";
 
     private static final float PI = (float) Math.PI;
 
@@ -67,6 +72,8 @@ public class CoordinateAxisChart extends View {
     private LinearType type;
 
     private PointF[] xPointsValues; // logic points, not raw points
+
+    private List<FunctionLine> lines = new ArrayList<>();
 
     public CoordinateAxisChart(Context context){
         super(context);
@@ -149,7 +156,27 @@ public class CoordinateAxisChart extends View {
 
         drawAxis(canvas);
 
-        drawFuncLine(canvas);
+        for (int i = 0; i < lines.size(); i++) {
+            FunctionLine line = lines.get(i);
+            this.type = line.getFunctionType();
+            if(line.getLineColor() != null){
+                this.functionLinePaint.setColor(line.getLineColor());
+            }else{
+                this.functionLinePaint.setColor(lineColor);
+            }
+            if(line.getLineWidth() != null){
+                this.functionLinePaint.setStrokeWidth(line.getLineWidth());
+            }else{
+                this.functionLinePaint.setStrokeWidth(FUNCTION_LINE_WIDTH);
+            }
+            try {
+                resetStatus();
+                setFunctionType(line.getFunctionType());
+                drawFuncLine(canvas);
+            } catch (FunctionTypeException e) {
+                e.printStackTrace();
+            }
+        }
 
     }
 
@@ -358,7 +385,9 @@ public class CoordinateAxisChart extends View {
      */
     private void generateLogLines(Float a, Float b, Float c, Float d, Canvas canvas){
         // raw
-        PointF start = origin;
+        PointF start = new PointF();
+        start.set(origin);
+        start.x += 1;
         PointF end = rightPoint;
 
         float unit = (end.x - start.x) / xPointsValues.length;
@@ -369,6 +398,9 @@ public class CoordinateAxisChart extends View {
             // logical
             PointF splitLogic = convertRawPoint2Logical(split, unitLength);
             // calculate
+            if(splitLogic.x == 0f){
+                continue;
+            }
             try {
                 splitLogic.y = FuncUtils.getLogYValue(a, b, c, d, splitLogic.x);
             } catch (FunctionNotValidException e) {
@@ -465,12 +497,15 @@ public class CoordinateAxisChart extends View {
                     float ad_x1 = xPointsValues[i].x + dx;
                     PointF dpLogic1 = convertRawPoint2Logical(ad_x1, origin.y, unitLength, origin);
                     PointF dp1 = FuncUtils.getPointByType(a, b, c, d, dpLogic1.x, type, circular);
+                    if(dp1 == null){
+                        continue;
+                    }
                     // get a line near xPointsValues[i]
                     float[] tangentLineFuncCoefficients1 = FuncUtils.computeLinearFuncsByPoints(
                                     convertRawPoint2Logical(xPointsValues[i], unitLength)
                                     , dp1);
                     if(tangentLineFuncCoefficients1 == null){
-                        Logger.w("tangentLineFuncCoefficients1 == null");
+                        Log.w(TAG, "tangentLineFuncCoefficients1 == null");
                         return;
                     }
 
@@ -483,7 +518,7 @@ public class CoordinateAxisChart extends View {
                                     convertRawPoint2Logical(xPointsValues[i + 1], unitLength)
                                     , dp2);
                     if(tangentLineFuncCoefficients2 == null){
-                        Logger.w("tangentLineFuncCoefficients2 == null");
+                        Log.w(TAG, "tangentLineFuncCoefficients2 == null");
                         return;
                     }
 
@@ -522,7 +557,7 @@ public class CoordinateAxisChart extends View {
                             tangentLineFuncCoefficients2[1]
                     );
                     if(controlPointLogic == null){
-                        Logger.w("controlPointLogic == null");
+                        Log.w(TAG, "controlPointLogic == null");
                         return;
                     }
                     PointF controlPointRaw = convertLogicalPoint2Raw(controlPointLogic, unitLength);
@@ -533,7 +568,7 @@ public class CoordinateAxisChart extends View {
         }
     }
 
-    public <T extends LinearType> void setFunctionType(T type) throws FunctionTypeException {
+    private  <T extends LinearType> void setFunctionType(T type) throws FunctionTypeException {
         if(type != null){
             switch (type.getClass().getSimpleName()){
                 case "LinearType":
@@ -576,11 +611,10 @@ public class CoordinateAxisChart extends View {
                 default:
                     throw new FunctionTypeException("Function type error.");
             }
-            invalidate();
         }
     }
 
-    public void reset(){
+    private void resetStatus(){
         a = null;
         b = null;
         c = null;
@@ -609,4 +643,20 @@ public class CoordinateAxisChart extends View {
         return new PointF(logicalX, logicalY);
     }
 
+    public void addFunctionLine(FunctionLine line){
+        if(lines != null){
+            lines.add(line);
+        }
+    }
+
+    public void reset(){
+        if(lines != null){
+            lines.clear();
+            invalidate();
+        }
+    }
+
+    public void setMax(int max) {
+        this.max = max;
+    }
 }
