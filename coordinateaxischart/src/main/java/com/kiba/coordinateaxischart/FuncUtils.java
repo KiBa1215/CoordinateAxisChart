@@ -63,14 +63,14 @@ public class FuncUtils {
                 if(tan != 0){
                     return 1 / (float) (a * Math.tan(c * x + d) + b);
                 }else{
-                    throw new FunctionTypeException("cot(nπ) is not valid.");
+                    throw new FunctionTypeException("cot(kπ) {n∈Z} is not valid.");
                 }
             default:
                 throw new FunctionTypeException("No 'Circular Type' found.");
         }
     }
 
-    public static PointF getPointByType(float a, float b, float c, float d, float x, FuncType type, Circular circular){
+    public static PointF getPointByType(Float a, Float b, Float c, Float d, Float x, FuncType type, Circular circular){
         switch (type){
             case LINEAR_TYPE:
                 return new PointF(x, getLinearYValue(a, b, x));

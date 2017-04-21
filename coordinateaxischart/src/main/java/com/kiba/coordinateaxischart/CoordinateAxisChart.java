@@ -26,6 +26,8 @@ import com.orhanobut.logger.Logger;
 
 public class CoordinateAxisChart extends View {
 
+    private static final float PI = (float) Math.PI;
+
     private float width; // view width
     private float height; // view height
 
@@ -39,13 +41,15 @@ public class CoordinateAxisChart extends View {
     private int FUNCTION_LINE_WIDTH = 0;
     private int POINT_RADIUS = 5;
 
-    private int SEGMENT_SIZE = 30; // by default, 30 points will be taken
-    private int dx = 2;
+    private int SEGMENT_SIZE = 50; // by default, 50 points will be taken
+    private int dx = 1;
 
     private int COORDINATE_TEXT_SIZE = 0; // the text size of text beside axis
 
     private int max = 5; // the max of the axis value
     private float unitLength; // the length between two neighbour points of axises
+    private int xMax = 0;
+    private int yMax = 0;
 
     // all points are points with raw coordinates
     private PointF origin;
@@ -171,8 +175,7 @@ public class CoordinateAxisChart extends View {
 
         // draw coordinate points
         unitLength = width > height? height / 2 / (max + 1) : width / 2 / (max + 1); // +1 is for not to overlap with arrows
-        int xMax = (int) (width > height? width / unitLength : height / unitLength);
-        int yMax;
+        xMax = (int) (width > height? width / unitLength : height / unitLength);
         if(xMax >= max){
             yMax = max;
         }else{
@@ -248,6 +251,8 @@ public class CoordinateAxisChart extends View {
                 case "ExpType":
                     if(c == 1){
                         generateLinearLines(0f, a + b, canvas);
+                    }else if(c == 0){
+                        generateLinearLines(0f, b, canvas);
                     }else{
                         generateExpLines(a, b, c, canvas);
                     }
@@ -416,17 +421,46 @@ public class CoordinateAxisChart extends View {
     private void drawBezier(Canvas canvas, FuncType type) {
         if(xPointsValues != null && xPointsValues.length > 0){
             Path path = new Path();
+            int k = -xMax;
+            // if it is tangent function
+            if(circular != null && circular.equals(CircularType.Circular.TAN)){
+                for (k = -xMax / 2; k < 0; k++) { // from left to right
+                    float leftX = k * PI - PI / 2;
+                    float rightX = k * PI + PI / 2;
+                    if (-xMax / 2 >= leftX && -xMax / 2 <= rightX){
+                        break;
+                    }
+                }
+            }
+            // if it is cotangent function
+            if(circular != null && circular.equals(CircularType.Circular.COT)){
+                for (k = -xMax / 2; k < 0; k++) { // from left to right
+                    float leftX = k * PI - PI / 2;
+                    float rightX = k * PI + PI / 2;
+                    if (-xMax / 2 >= leftX && -xMax / 2 <= rightX){
+                        break;
+                    }
+                }
+            }
+
             for (int i = 0; i < xPointsValues.length - 1; i++) {
-                // if out of screen, do not render it
-                if(     xPointsValues[i] != null &&
+                // if out of screen, do not render it 超出屏幕范围的点 不会绘制曲线
+                if(  xPointsValues[i] != null && xPointsValues[i + 1] != null &&
                      (
-                        (xPointsValues[i].y <= height && xPointsValues[i].y >= 0) || // inside screen
-                        ( i < xPointsValues.length - 1 && xPointsValues[i + 1].y <= height && xPointsValues[i + 1].y >= 0) || // the next point is inside screen
-                        ( i > 0 && xPointsValues[i - 1].y <= height && xPointsValues[i - 1].y >= 0)  // the previous point is inside screen
+                        // if current point is inside screen 判断当前点是否在屏幕内
+                        (xPointsValues[i].y <= height && xPointsValues[i].y >= 0) ||
+                        // if the next point is inside screen 判断下一个点是否在屏幕内
+                        ( i < xPointsValues.length - 1 && xPointsValues[i + 1].y <= height && xPointsValues[i + 1].y >= 0) ||
+                        // the previous point is inside screen 判断前一个点是否在屏幕内
+                        ( i > 0 && xPointsValues[i - 1].y <= height && xPointsValues[i - 1].y >= 0)
                      )
                 ){
                     path.moveTo(xPointsValues[i].x, xPointsValues[i].y);
-
+                    /*
+                     * 接下来将会计算得到两个相邻的点的切线方程，由此再算出两条切线的交点，将这个交点作为贝塞尔曲线的控制点
+                     * next will get two tangent lines of two adjacent points.
+                     * according to these two lines, will have a intersection point which will be used as the control point of a bezier curve.
+                     */
                     // get a point on the line which super near the current point
                     float ad_x1 = xPointsValues[i].x + dx;
                     PointF dpLogic1 = convertRawPoint2Logical(ad_x1, origin.y, unitLength, origin);
@@ -440,7 +474,7 @@ public class CoordinateAxisChart extends View {
                         return;
                     }
 
-                    // get a point on the line which super near the current point
+                    // get a point on the line which super near the (current + 1) point
                     float ad_x2 = xPointsValues[i + 1].x - dx;
                     PointF dpLogic2 = convertRawPoint2Logical(ad_x2, origin.y, unitLength, origin);
                     PointF dp2 = FuncUtils.getPointByType(a, b, c, d, dpLogic2.x, type, circular);
@@ -451,6 +485,33 @@ public class CoordinateAxisChart extends View {
                     if(tangentLineFuncCoefficients2 == null){
                         Logger.w("tangentLineFuncCoefficients2 == null");
                         return;
+                    }
+
+                    // if it is the tan func
+                    if(circular != null && circular.equals(CircularType.Circular.TAN)){
+                        float domainLeft = k * PI - PI / 2;
+                        float domainRight = k * PI + PI / 2;
+                        if (dpLogic1.x > domainLeft && dpLogic1.x < domainRight){
+                            if(dpLogic2.x > domainRight) {
+                                k++;
+                                continue;
+                            }
+                        }
+                    }
+
+                    // if it is the cot func
+                    if(circular != null && circular.equals(CircularType.Circular.COT)){
+                        float domain = k * PI;
+                        while(dpLogic1.x > domain){
+                            k++;
+                            domain = k * PI;
+                        }
+                        if (dpLogic1.x < domain){
+                            if(dpLogic2.x > domain) {
+                                k++;
+                                continue;
+                            }
+                        }
                     }
 
                     // compute the intersection point as the control point of bezier curve
@@ -513,7 +574,7 @@ public class CoordinateAxisChart extends View {
                     this.type = circularType;
                     break;
                 default:
-                    throw new FunctionTypeException("Function type error. ");
+                    throw new FunctionTypeException("Function type error.");
             }
             invalidate();
         }
@@ -523,6 +584,9 @@ public class CoordinateAxisChart extends View {
         a = null;
         b = null;
         c = null;
+        d = null;
+        circular = null;
+        this.type = null;
     }
 
     private PointF convertLogicalPoint2Raw(PointF logical, float unitLength){

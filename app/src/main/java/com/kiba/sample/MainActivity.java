@@ -21,18 +21,17 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         coordinateAxisChart = (CoordinateAxisChart) findViewById(R.id.coordinateAxisChart);
+        try {
+//            coordinateAxisChart.setFunctionType(new LinearType(2, 1));
+            coordinateAxisChart.setFunctionType(new PowerType(1, 1, 3));
+//            coordinateAxisChart.setFunctionType(new LogType(1, 0, 1, 0));
+//            coordinateAxisChart.setFunctionType(new ExpType(1, 0, 2f));
+//            coordinateAxisChart.setFunctionType(new CircularType(1, 0, 1, 0, CircularType.Circular.SIN));
+//            coordinateAxisChart.setFunctionType(new CircularType(1, 0, 1f, 0, CircularType.Circular.TAN));
 
-        coordinateAxisChart.post(new Runnable() {
-            @Override
-            public void run() {
-                try {
-//                    coordinateAxisChart.setFunctionType(new CircularType(1, 0, 1, 0, CircularType.Circular.SIN));
-                    coordinateAxisChart.setFunctionType(new LogType(1, 0, 1, 0));
+        } catch (FunctionTypeException e) {
+            e.printStackTrace();
+        }
 
-                } catch (FunctionTypeException e) {
-                    e.printStackTrace();
-                }
-            }
-        });
     }
 }
