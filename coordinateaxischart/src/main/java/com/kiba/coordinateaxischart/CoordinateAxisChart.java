@@ -37,6 +37,8 @@ public class CoordinateAxisChart extends View {
     private final int DEFAULT_AXIS_POINT_RADIUS = 5;
     private final int DEFAULT_AXIS_COLOR = Color.BLACK;
     private final int DEFAULT_MAX = 5;
+    private final int DEFAULT_SINGLE_POINT_RADIUS = 8;
+    private final int DEFAULT_SINGLE_POINT_COLOR = DEFAULT_AXIS_COLOR;
 
     private static final String TAG = "CoordinateAxisChart";
 
@@ -47,8 +49,9 @@ public class CoordinateAxisChart extends View {
 
     private Paint axisPaint;
     private Paint functionLinePaint;
+    private Paint pointPaint;
 
-    private int lineColor = Color.RED;
+    private int lineColor           = Color.RED;
     private int axisColor           = DEFAULT_AXIS_COLOR; // axis color
     private int axisWidth           = DEFAULT_AXIS_WIDTH;
     private int functionLineWidth   = DEFAULT_FUNCTION_LINE_WIDTH;
@@ -82,6 +85,7 @@ public class CoordinateAxisChart extends View {
     private ChartConfig config;
 
     private List<FunctionLine> lines = new ArrayList<>();
+    private List<SinglePoint> points = new ArrayList<>();
 
     public CoordinateAxisChart(Context context){
         super(context);
@@ -115,6 +119,11 @@ public class CoordinateAxisChart extends View {
         functionLinePaint.setAntiAlias(true);
         functionLinePaint.setDither(true);
         functionLinePaint.setStyle(Paint.Style.STROKE);
+
+        pointPaint = new Paint();
+        pointPaint.setColor(DEFAULT_SINGLE_POINT_COLOR);
+        pointPaint.setStyle(Paint.Style.FILL);
+        pointPaint.setAntiAlias(true);
 
         // prepare an array to cache the split points
         xPointsValues = new PointF[segmentSize];
@@ -164,6 +173,13 @@ public class CoordinateAxisChart extends View {
 
         drawAxis(canvas);
 
+        // draw points
+        for (int i = 0; i < points.size(); i++) {
+            SinglePoint point = points.get(i);
+            drawPoint(point, canvas);
+        }
+
+        // draw function lines
         for (int i = 0; i < lines.size(); i++) {
             FunctionLine line = lines.get(i);
             this.type = line.getFunctionType();
@@ -186,6 +202,16 @@ public class CoordinateAxisChart extends View {
             }
         }
 
+    }
+
+    private void drawPoint(SinglePoint point, Canvas canvas) {
+
+        PointF pointRaw = convertLogicalPoint2Raw(point.getPoint(), unitLength);
+        if(point.getPointColor() != null){
+            pointPaint.setColor(point.getPointColor());
+        }
+        int radius = point.getPointRadius() == null ? DEFAULT_SINGLE_POINT_RADIUS : point.getPointRadius();
+        canvas.drawCircle(pointRaw.x, pointRaw.y, radius, pointPaint);
     }
 
     private void drawAxis(Canvas canvas) {
@@ -657,11 +683,20 @@ public class CoordinateAxisChart extends View {
         }
     }
 
+    public void addPoint(SinglePoint point){
+        if(points != null){
+            points.add(point);
+        }
+    }
+
     public void reset(){
         if(lines != null){
             lines.clear();
-            invalidate();
         }
+        if(points != null){
+            points.clear();
+        }
+        invalidate();
     }
 
     public void setConfig(ChartConfig config) {

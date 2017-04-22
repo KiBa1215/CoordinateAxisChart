@@ -46,6 +46,13 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="y=2^x"
+            android:layout_toRightOf="@+id/sin"/>
+
+        <Button
+            android:id="@+id/point"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="point(1,2)"
             android:layout_below="@+id/linear"
             android:layout_toRightOf="@+id/sin"/>
 

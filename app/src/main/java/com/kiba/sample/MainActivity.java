@@ -1,6 +1,7 @@
 package com.kiba.sample;
 
 import android.graphics.Color;
+import android.graphics.PointF;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.view.View;
@@ -9,6 +10,7 @@ import android.widget.Button;
 import com.kiba.coordinateaxischart.ChartConfig;
 import com.kiba.coordinateaxischart.CoordinateAxisChart;
 import com.kiba.coordinateaxischart.FunctionLine;
+import com.kiba.coordinateaxischart.SinglePoint;
 import com.kiba.coordinateaxischart.type.CircularType;
 import com.kiba.coordinateaxischart.type.ExpType;
 import com.kiba.coordinateaxischart.type.LinearType;
@@ -18,7 +20,7 @@ import com.kiba.coordinateaxischart.type.PowerType;
 public class MainActivity extends AppCompatActivity implements View.OnClickListener{
 
     CoordinateAxisChart coordinateAxisChart;
-    Button linearBtn, powerBtn, logBtn, sinBtn, expBtn, resetBtn;
+    Button linearBtn, powerBtn, logBtn, sinBtn, expBtn, resetBtn, pointBtn;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -32,6 +34,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         sinBtn = (Button) findViewById(R.id.sin);
         expBtn = (Button) findViewById(R.id.exp);
         resetBtn = (Button) findViewById(R.id.reset);
+        pointBtn = (Button) findViewById(R.id.point);
 
         ChartConfig config = new ChartConfig();
         config.setMax(12);
@@ -45,6 +48,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         sinBtn.setOnClickListener(this);
         expBtn.setOnClickListener(this);
         resetBtn.setOnClickListener(this);
+        pointBtn.setOnClickListener(this);
 
     }
 
@@ -70,6 +74,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             case R.id.exp:
                 FunctionLine<ExpType> line5 = new FunctionLine<>(new ExpType(1, 0, 2), Color.parseColor("#00B0FF"));
                 coordinateAxisChart.addFunctionLine(line5);
+                break;
+            case R.id.point:
+                SinglePoint point = new SinglePoint(new PointF(1f, 2f));
+                point.setPointColor(Color.RED);
+                coordinateAxisChart.addPoint(point);
                 break;
             case R.id.reset:
                 coordinateAxisChart.reset();
