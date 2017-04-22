@@ -68,7 +68,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 coordinateAxisChart.addFunctionLine(line3);
                 break;
             case R.id.sin:
-                FunctionLine<LogType> line4 = new FunctionLine<LogType>(new CircularType(1, 0, 1, 0, CircularType.Circular.SIN), Color.parseColor("#FFCA28"));
+                FunctionLine<CircularType> line4 = new FunctionLine<>(new CircularType(1, 0, 1, 0, CircularType.Circular.SIN), Color.parseColor("#FFCA28"));
                 coordinateAxisChart.addFunctionLine(line4);
                 break;
             case R.id.exp:
