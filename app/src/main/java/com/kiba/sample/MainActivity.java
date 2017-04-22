@@ -6,6 +6,7 @@ import android.support.v7.app.AppCompatActivity;
 import android.view.View;
 import android.widget.Button;
 
+import com.kiba.coordinateaxischart.ChartConfig;
 import com.kiba.coordinateaxischart.CoordinateAxisChart;
 import com.kiba.coordinateaxischart.FunctionLine;
 import com.kiba.coordinateaxischart.type.CircularType;
@@ -32,7 +33,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         expBtn = (Button) findViewById(R.id.exp);
         resetBtn = (Button) findViewById(R.id.reset);
 
-        coordinateAxisChart.setMax(10);
+        ChartConfig config = new ChartConfig();
+        config.setMax(12);
+        config.setPrecision(1);
+        config.setSegmentSize(50);
+        coordinateAxisChart.setConfig(config);
 
         linearBtn.setOnClickListener(this);
         powerBtn.setOnClickListener(this);

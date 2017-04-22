@@ -29,6 +29,15 @@ import java.util.List;
 
 public class CoordinateAxisChart extends View {
 
+    private final int DEFAULT_AXIS_WIDTH = 2;
+    private final int DEFAULT_FUNCTION_LINE_WIDTH = 3;
+    private final int DEFAULT_COORDINATE_TEXT_SIZE = 16;
+    private final int DEFAULT_SEGMENT_SIZE = 50;
+    private final int DEFAULT_PRECISION = 1;
+    private final int DEFAULT_AXIS_POINT_RADIUS = 5;
+    private final int DEFAULT_AXIS_COLOR = Color.BLACK;
+    private final int DEFAULT_MAX = 5;
+
     private static final String TAG = "CoordinateAxisChart";
 
     private static final float PI = (float) Math.PI;
@@ -39,19 +48,16 @@ public class CoordinateAxisChart extends View {
     private Paint axisPaint;
     private Paint functionLinePaint;
 
-    private int axisColor = Color.BLACK; // axis color
     private int lineColor = Color.RED;
+    private int axisColor           = DEFAULT_AXIS_COLOR; // axis color
+    private int axisWidth           = DEFAULT_AXIS_WIDTH;
+    private int functionLineWidth   = DEFAULT_FUNCTION_LINE_WIDTH;
+    private int axisPointRadius     = DEFAULT_AXIS_POINT_RADIUS;
+    private int segmentSize         = DEFAULT_SEGMENT_SIZE; // by default, 50 points will be taken
+    private int dx                  = DEFAULT_PRECISION;
+    private int coordinateTextSize  = DEFAULT_COORDINATE_TEXT_SIZE; // the text size of text beside axis
+    private int max                 = DEFAULT_MAX; // the max of the axis value
 
-    private int AXIS_WIDTH = 0;
-    private int FUNCTION_LINE_WIDTH = 0;
-    private int POINT_RADIUS = 5;
-
-    private int SEGMENT_SIZE = 50; // by default, 50 points will be taken
-    private int dx = 1;
-
-    private int COORDINATE_TEXT_SIZE = 0; // the text size of text beside axis
-
-    private int max = 5; // the max of the axis value
     private float unitLength; // the length between two neighbour points of axises
     private int xMax = 0;
     private int yMax = 0;
@@ -73,6 +79,8 @@ public class CoordinateAxisChart extends View {
 
     private PointF[] xPointsValues; // logic points, not raw points
 
+    private ChartConfig config;
+
     private List<FunctionLine> lines = new ArrayList<>();
 
     public CoordinateAxisChart(Context context){
@@ -92,28 +100,24 @@ public class CoordinateAxisChart extends View {
 
     private void init(Context context) {
 
-        // define the values of widths
-        AXIS_WIDTH = Utils.dip2px(context, 1f);
-        FUNCTION_LINE_WIDTH = Utils.dip2px(context, 1.5f);
-        // coordinate text size
-        COORDINATE_TEXT_SIZE = Utils.sp2px(context, 8f);
+        setConfig(new ChartConfig(), false);
 
         axisPaint = new Paint();
-        axisPaint.setStrokeWidth(AXIS_WIDTH);
+        axisPaint.setStrokeWidth(axisWidth);
         axisPaint.setColor(axisColor);
         axisPaint.setAntiAlias(true);
         axisPaint.setStyle(Paint.Style.STROKE);
-        axisPaint.setTextSize(COORDINATE_TEXT_SIZE);
+        axisPaint.setTextSize(coordinateTextSize);
 
         functionLinePaint = new Paint();
-        functionLinePaint.setStrokeWidth(FUNCTION_LINE_WIDTH);
+        functionLinePaint.setStrokeWidth(functionLineWidth);
         functionLinePaint.setColor(lineColor);
         functionLinePaint.setAntiAlias(true);
         functionLinePaint.setDither(true);
         functionLinePaint.setStyle(Paint.Style.STROKE);
 
         // prepare an array to cache the split points
-        xPointsValues = new PointF[SEGMENT_SIZE];
+        xPointsValues = new PointF[segmentSize];
     }
 
     @Override
@@ -136,6 +140,10 @@ public class CoordinateAxisChart extends View {
     @Override
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
+
+        if(config == null){
+            return;
+        }
 
         if(origin == null){
             origin = new PointF();
@@ -167,7 +175,7 @@ public class CoordinateAxisChart extends View {
             if(line.getLineWidth() != null){
                 this.functionLinePaint.setStrokeWidth(line.getLineWidth());
             }else{
-                this.functionLinePaint.setStrokeWidth(FUNCTION_LINE_WIDTH);
+                this.functionLinePaint.setStrokeWidth(functionLineWidth);
             }
             try {
                 resetStatus();
@@ -217,9 +225,9 @@ public class CoordinateAxisChart extends View {
             if(x > leftPoint.x){
                 path.moveTo(x, y);
                 path.close();
-                canvas.drawCircle(x, y, POINT_RADIUS, axisPaint);
+                canvas.drawCircle(x, y, axisPointRadius, axisPaint);
                 String coorText = String.valueOf(-(i + 1));
-                canvas.drawText(coorText, x, y + COORDINATE_TEXT_SIZE, axisPaint);
+                canvas.drawText(coorText, x, y + coordinateTextSize, axisPaint);
             }
         }
         // x+ coordinate points
@@ -229,9 +237,9 @@ public class CoordinateAxisChart extends View {
             if(x < rightPoint.x){
                 path.moveTo(x, y);
                 path.close();
-                canvas.drawCircle(x, y, POINT_RADIUS, axisPaint);
+                canvas.drawCircle(x, y, axisPointRadius, axisPaint);
                 String coorText = String.valueOf(i + 1);
-                canvas.drawText(coorText, x, y + COORDINATE_TEXT_SIZE, axisPaint);
+                canvas.drawText(coorText, x, y + coordinateTextSize, axisPaint);
             }
         }
         // y+ coordinate points
@@ -241,9 +249,9 @@ public class CoordinateAxisChart extends View {
             if(y > topPoint.y){
                 path.moveTo(x, y);
                 path.close();
-                canvas.drawCircle(x, y, POINT_RADIUS, axisPaint);
+                canvas.drawCircle(x, y, axisPointRadius, axisPaint);
                 String coorText = String.valueOf(i + 1);
-                canvas.drawText(coorText, x - COORDINATE_TEXT_SIZE, y, axisPaint);
+                canvas.drawText(coorText, x - coordinateTextSize, y, axisPaint);
             }
         }
         // y- coordinate points
@@ -253,9 +261,9 @@ public class CoordinateAxisChart extends View {
             if(y < bottomPoint.y){
                 path.moveTo(x, y);
                 path.close();
-                canvas.drawCircle(x, y, POINT_RADIUS, axisPaint);
+                canvas.drawCircle(x, y, axisPointRadius, axisPaint);
                 String coorText = String.valueOf(-(i + 1));
-                canvas.drawText(coorText, x - COORDINATE_TEXT_SIZE * 1.2f, y, axisPaint);
+                canvas.drawText(coorText, x - coordinateTextSize * 1.2f, y, axisPaint);
             }
         }
 
@@ -656,6 +664,99 @@ public class CoordinateAxisChart extends View {
         }
     }
 
+    public void setConfig(ChartConfig config) {
+        setConfig(config, true);
+    }
+
+    private void setConfig(ChartConfig config, boolean invalidate){
+        this.config = config;
+        // axis color
+        if(config.getAxisColor() != null){
+            setAxisColor(config.getAxisColor());
+        }else{
+            setAxisColor(DEFAULT_AXIS_COLOR);
+            this.config.setAxisColor(DEFAULT_AXIS_COLOR);
+        }
+        // axis width
+        if(config.getAxisWidth() != null){
+            setAxisWidth(config.getAxisWidth());
+        }else{
+            setAxisWidth(DEFAULT_AXIS_WIDTH);
+            this.config.setAxisWidth(DEFAULT_AXIS_WIDTH);
+        }
+        // max values
+        if(config.getMax() != null){
+            setMax(config.getMax());
+        }else{
+            setMax(DEFAULT_MAX);
+            this.config.setMax(DEFAULT_MAX);
+        }
+        // dx
+        if(config.getPrecision() != null){
+            setPrecision(config.getPrecision());
+        }else{
+            setPrecision(DEFAULT_PRECISION);
+            this.config.setPrecision(DEFAULT_PRECISION);
+        }
+        // segment size
+        if(config.getSegmentSize() != null){
+            setSegmentSize(config.getSegmentSize());
+        }else{
+            setSegmentSize(DEFAULT_SEGMENT_SIZE);
+            this.config.setSegmentSize(DEFAULT_SEGMENT_SIZE);
+        }
+        // axis point radius
+        if(config.getAxisPointRadius() != null){
+            setAxisPointRadius(config.getAxisPointRadius());
+        }else{
+            setAxisPointRadius(DEFAULT_AXIS_POINT_RADIUS);
+            this.config.setAxisPointRadius(DEFAULT_AXIS_POINT_RADIUS);
+        }
+        if(invalidate){
+            invalidate();
+        }
+    }
+
+    public void setAxisWidth(int axisWidth) {
+        this.axisWidth = axisWidth;
+    }
+
+    /**
+     * 函数曲线的精度，这个精度用于计算两点间切线的交点。推荐值：1-10<br/>
+     * The precision of the function curve, it's used to calculate the intersection point of two points' tangent lines.
+     * value recommended: 1-10
+     * @param precision precision of the function curve
+     */
+    public void setPrecision(int precision) {
+        this.dx = precision;
+    }
+
+    /**
+     * 将x轴分割成segmentSize个点，成像时会将这些点连接起来。<br/>
+     * 注：size并不是越大越好，根据不同函数可做不同的调整（推荐值在30-100之间），尤其是tan和cot函数（目前尚未做优化）。<br/>
+     * The x axis will be equally separated to some segment points according to segmentSize,
+     * and will connect these points when drawing the function.<br/>
+     * <b>ATTENTION</b>: size is not the bigger the better,
+     * you have to adjust the size by different function types(30-100 is recommended),
+     * especially <b>tan() and cot()</b> function (not optimized yet) need adjustment.
+     * @param segmentSize segment size
+     */
+    public void setSegmentSize(int segmentSize){
+        this.segmentSize = segmentSize;
+    }
+
+    public void setAxisColor(int axisColor) {
+        this.axisColor = axisColor;
+    }
+
+    public void setAxisPointRadius(int axisPointRadius) {
+        this.axisPointRadius = axisPointRadius;
+    }
+
+    /**
+     * The max value that the axises have.
+     * @param max axis max value
+     */
     public void setMax(int max) {
         this.max = max;
     }
